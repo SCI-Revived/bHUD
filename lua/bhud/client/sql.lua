@@ -8,7 +8,7 @@ bhud.defs.version = 1.5
 bhud.defs.cdes = 1
 
 -- HoverHUD
-bhud.defs.hhud = { draw = true }
+bhud.defs.hhud = { draw = false }
 
 -- PlayerHUD
 bhud.defs.phud = { draw = true, design = 1, name = true, x = 20, y = ScrH() - 90, w = 200, h = 70 }

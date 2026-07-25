@@ -93,7 +93,7 @@ function bhud.spanel()
 	bhud.addchk( frm, 230, "Draw PlayerHUD", bhud.phud.draw, function( c ) bhud.phud.draw = c end )
 	bhud.addchk( frm, 230, "Draw TimeHUD", bhud.thud.draw, function( c ) bhud.thud.draw = c end )
 	bhud.addchk( frm, 230, "Draw Minimap", bhud.mhud.draw, function( c ) bhud.mhud.draw = c end )
-	bhud.addchk( frm, 230, "Draw Hovernames", bhud.hhud.draw, function( c ) bhud.hhud.draw = c end )
+
 
 	bhud.addlbl( frm, "PlayerHUD:", true, true )
 	bhud.addchk( frm, 230, "Draw player-name", bhud.phud.name, function( c ) bhud.phud.name = c end )

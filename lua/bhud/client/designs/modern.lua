@@ -16,6 +16,17 @@ local lw = ScrW() - 242 - 20
 local saw = ScrH()
 local maxes = {}
 
+local MaterialCache = {}
+local function GetCachedMaterial(p)
+	local Mat = MaterialCache[p]
+	if not Mat then
+		Mat = Material( "materials/bhud/" .. p )
+		MaterialCache[p] = Mat
+	end
+
+	return Mat
+end
+
 local function MakeTriangle( x, y, size, col )
 
 	local triangle = {
@@ -44,7 +55,7 @@ local function MakeBox( x, y, v, col, pic, piccol, v2 )
 	end
 	MakeTriangle( x + 40, y + ( 40 / 2 ) - 7, 15 )
 
-	surface.SetMaterial( Material( "materials/bhud/" .. pic ) )
+	surface.SetMaterial( GetCachedMaterial( "materials/bhud/" .. pic ) )
 	surface.SetDrawColor( piccol )
 	surface.DrawTexturedRect( x + 4, y + 4, 32, 32 )
 

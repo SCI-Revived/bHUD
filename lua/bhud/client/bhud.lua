@@ -1,4 +1,13 @@
 -----------------
+--  MATERIALS  --
+-----------------
+local MATERIAL_config 		= Material("materials/bhud/config.png")
+local MATERIAL_cursor 		= Material("materials/bhud/cursor.png")
+local MATERIAL_north 		= Material("materials/bhud/north.png")
+local MATERIAL_cursor_up 	= Material("materials/bhud/cursor_up.png")
+local MATERIAL_cursor_down 	= Material("materials/bhud/cursor_down.png")
+
+-----------------
 --  ANIMATION  --
 -----------------
 
@@ -181,7 +190,7 @@ local function drawHUD()
 		end
 
 		-- Draw little symbol
-		surface.SetMaterial( Material( "materials/bhud/config.png" ) )
+		surface.SetMaterial( MATERIAL_config )
 		surface.SetDrawColor( Color( 255, 150, 0, 255 ) )
 		surface.DrawTexturedRect( ScrW() - 5 - 16, ScrH() - 5 - 16, 16, 16 )
 
@@ -322,13 +331,13 @@ local function drawHUD()
 		draw_circle( "minimap_background", 60, mx, my, bhud.mhud.rad, Color( 50, 50, 50 ) )
 
 		-- MIDDLE CURSOR
-		surface.SetMaterial( Material( "materials/bhud/cursor.png" ) )
+		surface.SetMaterial( MATERIAL_cursor )
 		surface.SetDrawColor( team.GetColor( bhud.me:Team() ) )
 		surface.DrawTexturedRect( mx - 8, my - 8, 16, 16 )
 
 		-- NORTH
 		local north = math.AngleDifference( bhud.me:EyeAngles().y, 0 )
-		surface.SetMaterial( Material( "materials/bhud/north.png" ) )
+		surface.SetMaterial( MATERIAL_north )
 		surface.SetDrawColor( Color( 255, 255, 255 ) )
 		surface.DrawTexturedRect( mx + ( -sin( rad( north ) ) * bhud.mhud.rad ) - 8, my + ( cos( rad( north ) ) * bhud.mhud.rad ) - 8, 16, 16 )
 
@@ -348,11 +357,11 @@ local function drawHUD()
 
 			-- Set correct Cursor-Picture
 			if bhud.me:GetPos().z + bhud.mhud.tol < pl:GetPos().z then
-				surface.SetMaterial( Material( "materials/bhud/cursor_up.png" ) )
+				surface.SetMaterial( MATERIAL_cursor_up )
 			elseif bhud.me:GetPos().z - bhud.mhud.tol > pl:GetPos().z then
-				surface.SetMaterial( Material( "materials/bhud/cursor_down.png" ) )
+				surface.SetMaterial( MATERIAL_cursor_down )
 			else
-				surface.SetMaterial( Material( "materials/bhud/cursor.png" ) )
+				surface.SetMaterial( MATERIAL_cursor )
 			end
 
 			-- Draw Player-Curosr

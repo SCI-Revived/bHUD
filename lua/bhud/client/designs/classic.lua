@@ -9,9 +9,15 @@ local pn = 0
 local health = 100
 local armor = 0
 
+local MaterialCache = {}
 local function MakeImage( l, t, p, c )
+	local Mat = MaterialCache[p]
+	if not Mat then
+		Mat = Material( "materials/bhud/" .. p )
+		MaterialCache[p] = Mat
+	end
 
-	surface.SetMaterial( Material( "materials/bhud/" .. p ) )
+	surface.SetMaterial( Mat )
 	surface.SetDrawColor( c )
 	surface.DrawTexturedRect( l, t, 16, 16 )
 

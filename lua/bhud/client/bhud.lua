@@ -82,6 +82,58 @@ end )
 
 
 
+---------------------
+--  Minimap Gunfire --
+---------------------
+
+-- Tracks which players are currently "visible" on the minimap due to recent gunfire.
+-- Keyed by player entity -> true. Absence from the table means not currently firing.
+bhud.gunfire = bhud.gunfire or {}
+
+net.Receive( "bhud_gunfire", function( len )
+
+	local ply = net.ReadEntity()
+	local firing = net.ReadBool()
+
+	if !IsValid( ply ) then return end
+
+	if firing then
+		bhud.gunfire[ ply ] = true
+	else
+		bhud.gunfire[ ply ] = nil
+	end
+
+end )
+
+---------------------
+--  Squad Members  --
+---------------------
+
+-- SquadMenu / GetSquadID / GetActiveMembers are serverside-only, so the server resolves
+-- our squadmate list and pushes it to us here whenever it changes.
+bhud.squadmates = bhud.squadmates or {}
+
+net.Receive( "bhud_squadmates", function( len )
+
+	local list = net.ReadTable()
+
+	bhud.squadmates = {}
+	for _, mate in pairs( list ) do
+		if IsValid( mate ) then bhud.squadmates[ mate ] = true end
+	end
+
+end )
+
+-- Returns true if `pl` is an active member of the local player's squad.
+function bhud.isSquadmate( pl )
+
+	if !IsValid( pl ) or pl == bhud.me then return false end
+	return bhud.squadmates[ pl ] == true
+
+end
+
+
+
 --------------------
 --  Context Menu  --
 --------------------
@@ -347,6 +399,12 @@ local function drawHUD()
 			if ( !pl:IsPlayer() and !pl:IsNPC() ) or pl:Health() <= 0 or pl == bhud.me then return end
 			if pl:IsNPC() and !bhud.mhud.npc then return end
 
+			-- Players show up if: they're in a vehicle, they're a squadmate of the local
+			-- player, or they've recently fired their weapon (COD-style, unless stealthed
+			-- server-side). NPCs are unaffected by any of this.
+			local isSquadmate = pl:IsPlayer() and bhud.isSquadmate( pl )
+			if pl:IsPlayer() and !pl:InVehicle() and !isSquadmate and !bhud.gunfire[ pl ] then return end
+
 			-- Set Variables ( Positions, Angles, ... )
 			local dist = Vector( bhud.me:GetPos().x, bhud.me:GetPos().y, 0 ):Distance( Vector( pl:GetPos().x, pl:GetPos().y, 0 ) )
 			local ang = math.AngleDifference( bhud.me:EyeAngles().y - 180, ( bhud.me:GetPos() - pl:GetPos() ):Angle().y )
@@ -366,7 +424,10 @@ local function drawHUD()
 
 			-- Draw Player-Curosr
 			local col, name = Color( 255, 255, 255 ), pl:GetClass()
-			if pl:IsPlayer() then local col = team.GetColor( pl:Team() ) local name = pl:Nick() end
+			if pl:IsPlayer() then
+				col = isSquadmate and Color( 0, 255, 0 ) or team.GetColor( pl:Team() )
+				name = pl:Nick()
+			end
 			surface.SetDrawColor( col )
 			surface.DrawTexturedRectRotated( mx + posx, my + posy, 16, 16, -math.AngleDifference( bhud.me:EyeAngles().y, pl:EyeAngles().y ) )
 

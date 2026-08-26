@@ -1,15 +1,8 @@
------------------
---  MATERIALS  --
------------------
 local MATERIAL_config 		= Material("materials/bhud/config.png")
 local MATERIAL_cursor 		= Material("materials/bhud/cursor.png")
 local MATERIAL_north 		= Material("materials/bhud/north.png")
 local MATERIAL_cursor_up 	= Material("materials/bhud/cursor_up.png")
 local MATERIAL_cursor_down 	= Material("materials/bhud/cursor_down.png")
-
------------------
---  ANIMATION  --
------------------
 
 function bhud.animate( start, goal, dur )
 	
@@ -20,12 +13,6 @@ function bhud.animate( start, goal, dur )
 	return start + math.Clamp( goal - start, -st, st )
 
 end
-
-
-
----------------------
---  Short Strings  --
----------------------
 
 function bhud.short( s, w, f )
 
@@ -41,24 +28,11 @@ function bhud.short( s, w, f )
 
 end
 
-
-
-------------------
---  CL_DRAWHUD  --
-------------------
-
--- Update cl_drawhud-ConVar
 cvars.AddChangeCallback( "cl_drawhud", function( name, old, new )
 
 	bhud.cdraw = tobool( new )
 
 end )
-
-
-
--------------------------
---  Block Vanilla-HUD  --
--------------------------
 
 local function blockVHUD( name )
 
@@ -68,26 +42,14 @@ local function blockVHUD( name )
 end
 hook.Add( "HUDShouldDraw", "bhud_blockVHUD", blockVHUD )
 
-
-
---------------------
---  Restrictions  --
---------------------
-
 net.Receive( "bhud_restrictions", function( len )
 
 	bhud.res = net.ReadTable()
 
 end )
 
+-- Minimap Gunfire
 
-
----------------------
---  Minimap Gunfire --
----------------------
-
--- Tracks which players are currently "visible" on the minimap due to recent gunfire.
--- Keyed by player entity -> true. Absence from the table means not currently firing.
 bhud.gunfire = bhud.gunfire or {}
 
 net.Receive( "bhud_gunfire", function( len )
@@ -105,12 +67,9 @@ net.Receive( "bhud_gunfire", function( len )
 
 end )
 
----------------------
---  Squad Members  --
----------------------
 
--- SquadMenu / GetSquadID / GetActiveMembers are serverside-only, so the server resolves
--- our squadmate list and pushes it to us here whenever it changes.
+-- Squad Members
+
 bhud.squadmates = bhud.squadmates or {}
 
 net.Receive( "bhud_squadmates", function( len )
@@ -124,7 +83,6 @@ net.Receive( "bhud_squadmates", function( len )
 
 end )
 
--- Returns true if `pl` is an active member of the local player's squad.
 function bhud.isSquadmate( pl )
 
 	if !IsValid( pl ) or pl == bhud.me then return false end
@@ -306,47 +264,17 @@ local function drawHUD()
 	-- TimeHUD
 	if bhud.thud.draw then
 
-		-- Caluclate vars
 		if !bhud.thud.day then bhud.thud.ptime = os.date( "%H:%M" ) else bhud.thud.ptime = os.date( "%d %B %Y - %H:%M" ) end
 		surface.SetFont( bhud.font( "roboto", 16, 750 ) )
 		bhud.thud.width = surface.GetTextSize( bhud.thud.ptime ) + 10
---[[
-		if bhud.cmenu then
-			bhud.thud.width = math.Clamp( bhud.thud.width, 130, 300 )
-			bhud.thud.top = 50
-		else
-]]
-			bhud.thud.top = 20
---[[
-		end
-]]
+		bhud.thud.top = 20
+
 		bhud.thud.left = ScrW() - 20 - bhud.thud.width
 
-		-- Background
---[[	--draw.RoundedBoxEx( 4, bhud.thud.left, bhud.thud.top, bhud.thud.width, 22, Color( 0, 0, 0, 230 ), true, true, !bhud.cmenu, !bhud.cmenu ) ]]
 		draw.RoundedBox( 4, bhud.thud.left, bhud.thud.top, bhud.thud.width, 22, Color( 0, 0, 0, 230 ) )
 
-		-- Time
 		draw.SimpleText( bhud.thud.ptime, bhud.font( "roboto", 16 ), ScrW() - 25, bhud.thud.top + 3, Color( 255, 255, 255 ), TEXT_ALIGN_RIGHT )
---[[
-		if bhud.cmenu then
 
-			-- Background
-			draw.RoundedBoxEx( 4, al, at + 22, aw, 50, Color( 0, 0, 0, 200 ), false, false, true, true )
-
-			-- Stats
-			if !bhud.thud.day then draw.SimpleText( "Stats:", bhud.font( "roboto", 16, 750 ), al + 5, at + 3, Color( 255, 255, 255 ) ) end
-
-			-- Session
-			draw.SimpleText( "Session:", bhud.font( "roboto", 14 ), al + 10, at + 30, Color( 255, 255, 255 ), 0, 0 )
-			draw.SimpleText( string.NiceTime( os.time() - bhud.jtime ), bhud.font( "roboto", 14 ), al + 12 + surface.GetTextSize( "Session:" ), at + 30, Color( 255, 255, 255 ) )
-
-			-- Total
-			draw.SimpleText( "Total:", bhud.font( "roboto", 14 ), al + 10, at + 50, Color( 255, 255, 255 ), 0, 0 )
-			draw.SimpleText( string.NiceTime( bhud.thud.time + ( os.time() - bhud.jtime ) ), bhud.font( "roboto", 14 ), al + 12 + surface.GetTextSize( "Total:" ), at + 50, Color( 255, 255, 255 ) )
-
-		end
-]]
 	end
 
 	-- MapHUD
@@ -387,8 +315,14 @@ local function drawHUD()
 		surface.SetDrawColor( team.GetColor( bhud.me:Team() ) )
 		surface.DrawTexturedRect( mx - 8, my - 8, 16, 16 )
 
-		-- NORTH
-		local north = math.AngleDifference( bhud.me:EyeAngles().y, 0 )
+		local facing_yaw = bhud.me:EyeAngles().y
+		if bhud.me:InVehicle() then
+			local veh = bhud.me:GetVehicle()
+			if IsValid( veh ) then facing_yaw = veh:GetAngles().y end
+			facing_yaw = facing_yaw + 90
+		end
+
+		local north = math.AngleDifference( facing_yaw, 0 )
 		surface.SetMaterial( MATERIAL_north )
 		surface.SetDrawColor( Color( 255, 255, 255 ) )
 		surface.DrawTexturedRect( mx + ( -sin( rad( north ) ) * bhud.mhud.rad ) - 8, my + ( cos( rad( north ) ) * bhud.mhud.rad ) - 8, 16, 16 )
@@ -399,21 +333,15 @@ local function drawHUD()
 			if ( !pl:IsPlayer() and !pl:IsNPC() ) or pl:Health() <= 0 or pl == bhud.me then return end
 			if pl:IsNPC() and !bhud.mhud.npc then return end
 
-			-- Players show up if: they're in a vehicle, they're a squadmate of the local
-			-- player, or they've recently fired their weapon (COD-style, unless stealthed
-			-- server-side). NPCs are unaffected by any of this.
 			local isSquadmate = pl:IsPlayer() and bhud.isSquadmate( pl )
 			if pl:IsPlayer() and !pl:InVehicle() and !isSquadmate and !bhud.gunfire[ pl ] then return end
 
-			-- Set Variables ( Positions, Angles, ... )
 			local dist = Vector( bhud.me:GetPos().x, bhud.me:GetPos().y, 0 ):Distance( Vector( pl:GetPos().x, pl:GetPos().y, 0 ) )
-			local ang = math.AngleDifference( bhud.me:EyeAngles().y - 180, ( bhud.me:GetPos() - pl:GetPos() ):Angle().y )
+			local ang = math.AngleDifference( facing_yaw - 180, ( bhud.me:GetPos() - pl:GetPos() ):Angle().y )
 
-			-- Calculate Player-Cursor-Positions
 			local posx = -sin( rad( ang + 180 ) ) * ( math.Clamp( dist, 0, bhud.mhud.rad * 10 ) * 0.1 )
 			local posy = cos( rad( ang + 180 ) ) * ( math.Clamp( dist, 0, bhud.mhud.rad * 10 ) * 0.1 )
 
-			-- Set correct Cursor-Picture
 			if bhud.me:GetPos().z + bhud.mhud.tol < pl:GetPos().z then
 				surface.SetMaterial( MATERIAL_cursor_up )
 			elseif bhud.me:GetPos().z - bhud.mhud.tol > pl:GetPos().z then
@@ -422,14 +350,20 @@ local function drawHUD()
 				surface.SetMaterial( MATERIAL_cursor )
 			end
 
-			-- Draw Player-Curosr
 			local col, name = Color( 255, 255, 255 ), pl:GetClass()
 			if pl:IsPlayer() then
 				col = isSquadmate and Color( 0, 255, 0 ) or team.GetColor( pl:Team() )
 				name = pl:Nick()
 			end
 			surface.SetDrawColor( col )
-			surface.DrawTexturedRectRotated( mx + posx, my + posy, 16, 16, -math.AngleDifference( bhud.me:EyeAngles().y, pl:EyeAngles().y ) )
+
+			local pl_yaw = pl:EyeAngles().y
+			if pl:IsPlayer() and pl:InVehicle() then
+				local pl_veh = pl:GetVehicle()
+				if IsValid( pl_veh ) then pl_yaw = pl_veh:GetAngles().y end
+			end
+
+			surface.DrawTexturedRectRotated( mx + posx, my + posy, 16, 16, -math.AngleDifference( facing_yaw, pl_yaw ) )
 
 			-- Draw Name and Distance
 			draw.SimpleText( name, bhud.font( "roboto", 14 ), mx + posx - 8, my + posy + 10, Color( 255, 255, 255 ) )

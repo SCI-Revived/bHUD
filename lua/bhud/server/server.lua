@@ -52,10 +52,13 @@ concommand.Add( "bhud_restrict", change_res )
 --  MINIMAP GUNFIRE TRACK  --
 -----------------------------
 
+local GUNFIRE_DURATION = 3 -- seconds a (non-stealthed) player stays visible after firing
+
 util.AddNetworkString( "bhud_gunfire" )
 
--- Currently-visible-due-to-firing players. Keyed by player -> true.
-bhud.firing = bhud.firing or {}
+-- Deadline (CurTime()) until which a player stays visible on the minimap due to gunfire.
+-- Absence from the table (or an expired deadline) means not currently visible-from-firing.
+bhud.firing_until = bhud.firing_until or {}
 
 -- Tell everyone a player has started/stopped being minimap-visible due to gunfire
 local function bhud_send_gunfire( ply, firing )
@@ -68,23 +71,30 @@ local function bhud_send_gunfire( ply, firing )
 end
 
 -- Called once per shot. Players with the "sci_passive_stealth" passive never show up
--- from gunfire; everyone else shows up immediately when they shoot.
+-- from gunfire. Everyone else shows up immediately when they shoot, and stays visible
+-- for GUNFIRE_DURATION seconds after their last shot (refreshed on every bullet, so
+-- full-auto weapons keep extending the deadline instead of only the first shot).
 local function bhud_register_shot( ply )
 
 	if !IsValid( ply ) or !ply:IsPlayer() then return end
 
 	if ply:HavePassive( "sci_passive_stealth" ) then
 
-		-- Stealthed: make sure they're not lingering as visible from an earlier shot
-		if bhud.firing[ ply ] then
-			bhud.firing[ ply ] = nil
+		-- Stealthed: make sure they're not lingering as visible from an earlier,
+		-- pre-stealth shot
+		if bhud.firing_until[ ply ] then
+			bhud.firing_until[ ply ] = nil
 			bhud_send_gunfire( ply, false )
 		end
 
 	else
 
-		if !bhud.firing[ ply ] then
-			bhud.firing[ ply ] = true
+		local wasFiring = bhud.firing_until[ ply ] and bhud.firing_until[ ply ] > CurTime()
+		bhud.firing_until[ ply ] = CurTime() + GUNFIRE_DURATION
+
+		-- Only broadcast on the transition into "firing", not on every extension,
+		-- to avoid spamming the network during sustained full-auto fire
+		if !wasFiring then
 			bhud_send_gunfire( ply, true )
 		end
 
@@ -104,17 +114,30 @@ hook.Add( "PlayerFireProjectile", "bhud_gunfire_projectile", function( ply, ent 
 	bhud_register_shot( ply )
 end )
 
--- Clean up on disconnect so the table doesn't hold stale entities
-hook.Add( "PlayerDisconnected", "bhud_gunfire_cleanup", function( ply )
-	bhud.firing[ ply ] = nil
+-- Poll for expired firing-states and notify clients to hide those players again.
+-- (A timer is simpler and more reliable here than trying to schedule one net message
+-- per player per shot at exactly +3 seconds.)
+timer.Create( "bhud_gunfire_expiry", 0.25, 0, function()
+
+	for ply, until_time in pairs( bhud.firing_until ) do
+
+		if !IsValid( ply ) then
+			bhud.firing_until[ ply ] = nil
+		elseif until_time <= CurTime() then
+			bhud.firing_until[ ply ] = nil
+			bhud_send_gunfire( ply, false )
+		end
+
+	end
+
 end )
 
 -- Sync current firing-state to players as they join, so their minimap starts accurate
 -- instead of assuming nobody is firing
 hook.Add( "PlayerAuthed", "bhud_gunfire_sync", function( ply )
 
-	for firer in pairs( bhud.firing ) do
-		if IsValid( firer ) then
+	for firer, until_time in pairs( bhud.firing_until ) do
+		if IsValid( firer ) and until_time > CurTime() then
 			net.Start( "bhud_gunfire" )
 				net.WriteEntity( firer )
 				net.WriteBool( true )

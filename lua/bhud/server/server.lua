@@ -25,6 +25,8 @@ hook.Add( "PlayerAuthed", "bhud_player_authed", send_res )
 -- Change restrictions
 local function change_res( ply, cmd, args )
 
+	if IsValid( ply ) and !ply:IsSuperAdmin() then return end
+
 	if cmd != "bhud_restrict" then return end
 
 	local s, r = args[1], tobool( args[2] )
@@ -252,6 +254,8 @@ end )
 -- Usage (server console / rcon):  bhud_force_squad_join Bot07 paloma
 -- Forces the first player into the second player's squad, ignoring the member limit.
 concommand.Add( "bhud_force_squad_join", function( ply, cmd, args )
+
+	if IsValid( ply ) and !ply:IsSuperAdmin() then return end
 
 	if !SquadMenu then
 		print( "[bhud-Debug]: SquadMenu isn't loaded." )
